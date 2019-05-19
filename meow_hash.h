@@ -147,6 +147,22 @@ static const unsigned char MeowS3Init[] = MEOW_S3_INIT;
 // NOTE(casey): 128-wide AES-NI Meow (maximum of 16 bytes/clock single threaded)
 //
 
+static inline meow_aes_128
+Meow128_AESDEC_Memx2( meow_aes_128 R,  meow_u8 *S )
+{
+    R = Meow128_AESDEC_Mem(R, S);
+    R = Meow128_AESDEC_Mem(R, S);
+    return R;
+}
+
+static inline meow_aes_128
+Meow128_AESDECx2( meow_aes_128 S,  meow_aes_128 R )
+{
+    R = Meow128_AESDEC(R, S);
+    R = Meow128_AESDEC(R, S);
+    return R;
+}
+
 static meow_hash
 MeowHash_Accelerated(meow_u64 Seed, meow_u64 TotalLengthInBytes, void *SourceInit)
 {
@@ -173,10 +189,10 @@ MeowHash_Accelerated(meow_u64 Seed, meow_u64 TotalLengthInBytes, void *SourceIni
     
     while(Len >= 64)
     {
-        S0 = Meow128_AESDEC_Mem(S0, Source);
-        S1 = Meow128_AESDEC_Mem(S1, Source + 16);
-        S2 = Meow128_AESDEC_Mem(S2, Source + 32);
-        S3 = Meow128_AESDEC_Mem(S3, Source + 48);
+        S0 = Meow128_AESDEC_Memx2(S0, Source);
+        S1 = Meow128_AESDEC_Memx2(S1, Source + 16);
+        S2 = Meow128_AESDEC_Memx2(S2, Source + 32);
+        S3 = Meow128_AESDEC_Memx2(S3, Source + 48);
         
         Len -= 64;
         Source += 64;
@@ -209,14 +225,14 @@ MeowHash_Accelerated(meow_u64 Seed, meow_u64 TotalLengthInBytes, void *SourceIni
             meow_u128 Partial = Meow128_Shuffle_Mem(Overhang - Align, &MeowShiftAdjust[Align]);
             
             Partial = Meow128_And_Mem( Partial, &MeowMaskLen[16 - Len8] );
-            S3 = Meow128_AESDEC(S3, Partial);
+            S3 = Meow128_AESDECx2(S3, Partial);
         }
         else
         {
             // NOTE(casey): We don't have to do Jeff's heroics when we know the
             // buffer is aligned, since we cannot span a memory page (by definition).
             meow_u128 Partial = Meow128_And_Mem(*(meow_u128 *)Overhang, &MeowMaskLen[16 - Len8]);
-            S3 = Meow128_AESDEC(S3, Partial);
+            S3 = Meow128_AESDECx2(S3, Partial);
         }
     }
     
@@ -226,9 +242,9 @@ MeowHash_Accelerated(meow_u64 Seed, meow_u64 TotalLengthInBytes, void *SourceIni
     
     switch(Len128)
     {
-        case 48: S2 = Meow128_AESDEC_Mem(S2, Source + 32);
-        case 32: S1 = Meow128_AESDEC_Mem(S1, Source + 16);
-        case 16: S0 = Meow128_AESDEC_Mem(S0, Source);
+        case 48: S2 = Meow128_AESDEC_Memx2(S2, Source + 32);
+        case 32: S1 = Meow128_AESDEC_Memx2(S1, Source + 16);
+        case 16: S0 = Meow128_AESDEC_Memx2(S0, Source);
     }
     
     //

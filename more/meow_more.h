@@ -46,10 +46,10 @@ MeowHashAbsorbBlocks(meow_hash_state *State, meow_u64 BlockCount, meow_u8 *Sourc
     
     while(BlockCount--)
     {
-        S0 = Meow128_AESDEC_Mem(S0, Source);
-        S1 = Meow128_AESDEC_Mem(S1, Source + 16);
-        S2 = Meow128_AESDEC_Mem(S2, Source + 32);
-        S3 = Meow128_AESDEC_Mem(S3, Source + 48);
+        S0 = Meow128_AESDEC_Memx2(S0, Source);
+        S1 = Meow128_AESDEC_Memx2(S1, Source + 16);
+        S2 = Meow128_AESDEC_Memx2(S2, Source + 32);
+        S3 = Meow128_AESDEC_Memx2(S3, Source + 48);
         
         Source += 64;
     }
@@ -116,9 +116,9 @@ MeowHashEnd(meow_hash_state *State, meow_u64 Seed)
     
     switch(Len >> 4)
     {
-        case  3: S2 = Meow128_AESDEC_Mem(S2, Source + 32);
-        case  2: S1 = Meow128_AESDEC_Mem(S1, Source + 16);
-        case  1: S0 = Meow128_AESDEC_Mem(S0, Source);
+        case  3: S2 = Meow128_AESDEC_Memx2(S2, Source + 32);
+        case  2: S1 = Meow128_AESDEC_Memx2(S1, Source + 16);
+        case  1: S0 = Meow128_AESDEC_Memx2(S0, Source);
         default:;
     }
     Source += (Len & 0xF0);
@@ -142,7 +142,7 @@ MeowHashEnd(meow_hash_state *State, meow_u64 Seed)
         meow_u128 Partial = Meow128_Shuffle_Mem(Source - Align, &MeowShiftAdjust[Align]);
         
         Partial = Meow128_And_Mem( Partial, &MeowMaskLen[16 - Len] );
-        S3 = Meow128_AESDEC(S3, Partial);
+        S3 = Meow128_AESDECx2(S3, Partial);
     }
     
     meow_u128 Mixer = Meow128_Set64x2(Seed - State->TotalLengthInBytes,
