@@ -6,6 +6,8 @@ test in [smhasher](https://github.com/hmakholm/smhasher) from Hening Makholm.
 
 I also modified the hashes to use a 128 bit seed instead of a 64 bit seed.
 
+Read [Casy Muratori](https://github.com/cmuratori/) comments [here](https://github.com/cmuratori/meow_hash/issues/45#issuecomment-493779607)
+
 # Meow hash 0.4/himalayan
 This is the official x64 implementation of the Meow hash, an extremely fast non-cryptographic hash.  See https://mollyrocket.com/meowhash for usage, implementation, and license details.
 
