@@ -42,7 +42,7 @@ int MeowHashSpecializeForCPU(void)
     try
     {
         char Garbage[64];
-        MeowHash_Accelerated(0, sizeof(Garbage), Garbage);
+        MeowHash_Accelerated(0, 0, sizeof(Garbage), Garbage);
         MeowHash = MeowHash_Accelerated;
         Result = 128;
     }

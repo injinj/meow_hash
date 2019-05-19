@@ -46,17 +46,17 @@ static void* aligned_alloc(size_t alignment, size_t size)
 #define ArrayCount(Array) (sizeof(Array)/sizeof((Array)[0]))
 
 static meow_hash
-MeowHashTruncate64(meow_u64 Seed, meow_u64 Len, void *Source)
+MeowHashTruncate64(meow_u64 Seed1, meow_u64 Seed2, meow_u64 Len, void *Source)
 {
-    meow_hash Result = MeowHash_Accelerated(Seed, Len, Source);
+    meow_hash Result = MeowHash_Accelerated(Seed1, Seed2, Len, Source);
     ((meow_u64 *)&Result)[1] = 0;
     return(Result);
 }
 
 static meow_hash
-MeowHashTruncate32(meow_u64 Seed, meow_u64 Len, void *Source)
+MeowHashTruncate32(meow_u64 Seed1, meow_u64 Seed2, meow_u64 Len, void *Source)
 {
-    meow_hash Result = MeowHashTruncate64(Seed, Len, Source);
+    meow_hash Result = MeowHashTruncate64(Seed1, Seed2, Len, Source);
     ((meow_u32 *)&Result)[1] = 0;
     return(Result);
 }

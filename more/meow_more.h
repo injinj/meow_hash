@@ -104,7 +104,7 @@ MeowHashAbsorb(meow_hash_state *State, meow_u64 Len, void *SourceInit)
 }
 
 static meow_hash
-MeowHashEnd(meow_hash_state *State, meow_u64 Seed)
+MeowHashEnd(meow_hash_state *State, meow_u64 Seed1, meow_u64 Seed2)
 {
     meow_aes_128 S0 = State->S0;
     meow_aes_128 S1 = State->S1;
@@ -113,40 +113,71 @@ MeowHashEnd(meow_hash_state *State, meow_u64 Seed)
     
     meow_u8 *Source = State->Buffer;
     int unsigned Len = State->BufferLen;
-    
-    switch(Len >> 4)
-    {
-        case  3: S2 = Meow128_AESDEC_Memx2(S2, Source + 32);
-        case  2: S1 = Meow128_AESDEC_Memx2(S1, Source + 16);
-        case  1: S0 = Meow128_AESDEC_Memx2(S0, Source);
-        default:;
-    }
-    Source += (Len & 0xF0);
-    
-    if(Len & 15)
-    {
-        int Align = ((int)(meow_umm)Source) & 15;
-        int End = ((int)(meow_umm)Source) & (MEOW_PAGESIZE - 1);
-        Len &= 15;
-        
-        if (End <= (MEOW_PAGESIZE - 16))
-        {
-            Align = 0;
-        }
-        
-        if ((End + Len) > MEOW_PAGESIZE)
-        {
-            Align = 0;
-        }
+    int unsigned Len8 = Len & 15;
+    int unsigned Len128 = Len & 48;
 
-        meow_u128 Partial = Meow128_Shuffle_Mem(Source - Align, &MeowShiftAdjust[Align]);
-        
-        Partial = Meow128_And_Mem( Partial, &MeowMaskLen[16 - Len] );
-        S3 = Meow128_AESDECx2(S3, Partial);
+    while(Len >= 64)
+    {
+        S0 = Meow128_AESDEC_Memx2(S0, Source);
+        S1 = Meow128_AESDEC_Memx2(S1, Source + 16);
+        S2 = Meow128_AESDEC_Memx2(S2, Source + 32);
+        S3 = Meow128_AESDEC_Memx2(S3, Source + 48);
+
+        Len -= 64;
+        Source += 64;
     }
-    
-    meow_u128 Mixer = Meow128_Set64x2(Seed - State->TotalLengthInBytes,
-                                      Seed + State->TotalLengthInBytes + 1);
+
+    //
+    // NOTE(casey): Overhanging individual bytes
+    //
+
+    if(Len8)
+    {
+        meow_u8 *Overhang = Source + Len128;
+        int Align = ((int)(meow_umm)Overhang) & 15;
+        if(Align)
+        {
+            int End = ((int)(meow_umm)Overhang) & (MEOW_PAGESIZE - 1);
+
+            // NOTE(jeffr): If we are nowhere near the page end, use full unaligned load (cmov to set)
+            if (End <= (MEOW_PAGESIZE - 16))
+            {
+                Align = 0;
+            }
+
+            // NOTE(jeffr): If we will read over the page end, use a full unaligned load (cmov to set)
+            if ((End + Len8) > MEOW_PAGESIZE)
+            {
+                Align = 0;
+            }
+
+            meow_u128 Partial = Meow128_Shuffle_Mem(Overhang - Align, &MeowShiftAdjust[Align]);
+
+            Partial = Meow128_And_Mem( Partial, &MeowMaskLen[16 - Len8] );
+            S3 = Meow128_AESDECx2(S3, Partial);
+        }
+        else
+        {
+            // NOTE(casey): We don't have to do Jeff's heroics when we know the
+            // buffer is aligned, since we cannot span a memory page (by definition).
+            meow_u128 Partial = Meow128_And_Mem(*(meow_u128 *)Overhang, &MeowMaskLen[16 - Len8]);
+            S3 = Meow128_AESDECx2(S3, Partial);
+        }
+    }
+
+    //
+    // NOTE(casey): Overhanging full 128-bit lanes
+    //
+
+    switch(Len128)
+    {
+        case 48: S2 = Meow128_AESDEC_Memx2(S2, Source + 32);
+        case 32: S1 = Meow128_AESDEC_Memx2(S1, Source + 16);
+        case 16: S0 = Meow128_AESDEC_Memx2(S0, Source);
+    }
+
+    meow_u128 Mixer = Meow128_Set64x2(Seed1 - State->TotalLengthInBytes,
+                                      Seed2 + State->TotalLengthInBytes + 1);
        
     S3 = Meow128_AESDEC(S3, Mixer);
     S2 = Meow128_AESDEC(S2, Mixer);
@@ -332,8 +363,15 @@ Meow128_AESDEC_C(meow_u32 *State, const void *KeyInit)
     State[3] = MeowAESBox0[S3 & 0xFF] ^ MeowAESBox1[S0 >> 24] ^ MeowAESBox2[(S1 >> 16) & 0xFF] ^ MeowAESBox3[(S2 >> 8) & 0xFF] ^ Key[3];
 }
 
+static void
+Meow128_AESDEC_Cx2(meow_u32 *State, const void *KeyInit)
+{
+  Meow128_AESDEC_C(State, KeyInit);
+  Meow128_AESDEC_C(State, KeyInit);
+}
+
 static meow_hash
-MeowHash_C(meow_u64 Seed, meow_u64 TotalLengthInBytes, void *SourceInit)
+MeowHash_C(meow_u64 Seed1, meow_u64 Seed2, meow_u64 TotalLengthInBytes, void *SourceInit)
 {
     meow_u8 D0[] = MEOW_S0_INIT;
     meow_u8 D1[] = MEOW_S1_INIT;
@@ -351,19 +389,19 @@ MeowHash_C(meow_u64 Seed, meow_u64 TotalLengthInBytes, void *SourceInit)
     Len -= (BlockCount << 6);
     while(BlockCount--)
     {
-        Meow128_AESDEC_C(S0, Source);
-        Meow128_AESDEC_C(S1, Source + 16);
-        Meow128_AESDEC_C(S2, Source + 32);
-        Meow128_AESDEC_C(S3, Source + 48);
+        Meow128_AESDEC_Cx2(S0, Source);
+        Meow128_AESDEC_Cx2(S1, Source + 16);
+        Meow128_AESDEC_Cx2(S2, Source + 32);
+        Meow128_AESDEC_Cx2(S3, Source + 48);
         
         Source += 64;
     }
     
     switch(Len >> 4)
     {
-        case  3: Meow128_AESDEC_C(S2, Source + 32);
-        case  2: Meow128_AESDEC_C(S1, Source + 16);
-        case  1: Meow128_AESDEC_C(S0, Source);
+        case  3: Meow128_AESDEC_Cx2(S2, Source + 32);
+        case  2: Meow128_AESDEC_Cx2(S1, Source + 16);
+        case  1: Meow128_AESDEC_Cx2(S0, Source);
     }
     Source += (Len & 0xF0);
 
@@ -377,10 +415,10 @@ MeowHash_C(meow_u64 Seed, meow_u64 TotalLengthInBytes, void *SourceInit)
             Dest[Len] = Source[Len];
         }
         
-        Meow128_AESDEC_C(S3, Buffer);
+        Meow128_AESDEC_Cx2(S3, Buffer);
     }
     
-    meow_u64 Mixer[2] = {Seed - TotalLengthInBytes, Seed + TotalLengthInBytes + 1};
+    meow_u64 Mixer[2] = {Seed1 - TotalLengthInBytes, Seed2 + TotalLengthInBytes + 1};
     
     Meow128_AESDEC_C(S3, Mixer);
     Meow128_AESDEC_C(S2, Mixer);

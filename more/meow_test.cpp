@@ -44,7 +44,7 @@ main(int ArgCount, char **Args)
         meow_u8 *Test = (meow_u8 *)aligned_alloc(CACHE_LINE_ALIGNMENT, 257);
         TRY
         {
-            MeowHash_Accelerated(0, 256, Test + 1);
+            MeowHash_Accelerated(0, 0, 256, Test + 1);
             printf("supported");
         }
         CATCH
@@ -92,7 +92,7 @@ main(int ArgCount, char **Args)
                     meow_u8 FlipBit = (1 << (Flip % 8));
                     *FlipByte |= FlipBit;
                     
-                    meow_hash Canonical = MeowHash_C(Seed, BufferSize, Buffer);
+                    meow_hash Canonical = MeowHash_C(Seed, Seed, BufferSize, Buffer);
                     if(Guard)
                     {
                         memset(Allocation, 0xFF, CACHE_LINE_ALIGNMENT);
@@ -102,7 +102,7 @@ main(int ArgCount, char **Args)
                     ++TotalPossible;
                     TRY
                     {
-                        meow_hash ImpHash = Type->Imp(Seed, BufferSize, Buffer);
+                        meow_hash ImpHash = Type->Imp(Seed, Seed, BufferSize, Buffer);
                         if(!MeowHashesAreEqual(Canonical, ImpHash))
                         {
                             ++ImpError;
@@ -131,7 +131,7 @@ main(int ArgCount, char **Args)
                                     Count -= Amount;
                                 }
                                 
-                                meow_hash AbsorbHash = MeowHashEnd(&State, Seed);
+                                meow_hash AbsorbHash = MeowHashEnd(&State, Seed, Seed);
                                 if(!MeowHashesAreEqual(Canonical, AbsorbHash))
                                 {
                                     ++StreamError;

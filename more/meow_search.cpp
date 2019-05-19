@@ -231,7 +231,7 @@ IngestFile(test_group *Group, char *FileName)
         {
             test *Test = Group->Tests + TestIndex;
             
-            meow_hash Hash = Test->Type.Imp(0, File.Size, File.Contents);
+            meow_hash Hash = Test->Type.Imp(0, 0, File.Size, File.Contents);
             
             test_value **Slot = &Test->Table[MeowU32From(Hash, 0) % ArrayCount(Test->Table)];
             test_value *Entry = *Slot;
@@ -248,7 +248,7 @@ IngestFile(test_group *Group, char *FileName)
                     Check = Check->Next)
                 {
                     entire_file OtherFile = ReadEntireFile(Group, Check->FileName);
-                    meow_hash OtherHash = Test->Type.Imp(0, OtherFile.Size, OtherFile.Contents);
+                    meow_hash OtherHash = Test->Type.Imp(0, 0, OtherFile.Size, OtherFile.Contents);
                     if(MeowHashesAreEqual(Hash, OtherHash))
                     {
                         if(OtherFile.Contents &&

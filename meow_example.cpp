@@ -69,7 +69,7 @@ HashTestBuffer(void)
     }
     
     // NOTE(casey): Ask Meow for the hash
-    meow_hash Hash = MeowHash_Accelerated(0, Size, Buffer);
+    meow_hash Hash = MeowHash_Accelerated(0, 0, Size, Buffer);
     
     // NOTE(casey): Extract example smaller hash sizes you might want:
     long long unsigned Hash64 = MeowU64From(Hash, 0);
@@ -90,7 +90,7 @@ HashOneFile(char *FilenameA)
     if(A.Contents)
     {
         // NOTE(casey): Ask Meow for the hash
-        meow_hash HashA = MeowHash_Accelerated(0, A.Size, A.Contents);
+        meow_hash HashA = MeowHash_Accelerated(0, 0, A.Size, A.Contents);
         
         // NOTE(casey): Print the hash
         printf("  Hash of \"%s\":\n", FilenameA);
@@ -109,8 +109,8 @@ CompareTwoFiles(char *FilenameA, char *FilenameB)
     if(A.Contents && B.Contents)
     {
         // NOTE(casey): Hash both files
-        meow_hash HashA = MeowHash_Accelerated(0, A.Size, A.Contents);
-        meow_hash HashB = MeowHash_Accelerated(0, B.Size, B.Contents);
+        meow_hash HashA = MeowHash_Accelerated(0, 0, A.Size, A.Contents);
+        meow_hash HashB = MeowHash_Accelerated(0, 0, B.Size, B.Contents);
         
         // NOTE(casey): Check for match
         int HashesMatch = MeowHashesAreEqual(HashA, HashB);

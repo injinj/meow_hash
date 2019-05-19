@@ -156,7 +156,7 @@ Meow128_AESDEC_Memx2( meow_aes_128 R,  meow_u8 *S )
 }
 
 static inline meow_aes_128
-Meow128_AESDECx2( meow_aes_128 S,  meow_aes_128 R )
+Meow128_AESDECx2( meow_aes_128 R,  meow_aes_128 S )
 {
     R = Meow128_AESDEC(R, S);
     R = Meow128_AESDEC(R, S);
@@ -164,7 +164,7 @@ Meow128_AESDECx2( meow_aes_128 S,  meow_aes_128 R )
 }
 
 static meow_hash
-MeowHash_Accelerated(meow_u64 Seed, meow_u64 TotalLengthInBytes, void *SourceInit)
+MeowHash_Accelerated(meow_u64 Seed1, meow_u64 Seed2, meow_u64 TotalLengthInBytes, void *SourceInit)
 {
     //
     // NOTE(casey): Initialize the four AES streams and the mixer
@@ -175,8 +175,8 @@ MeowHash_Accelerated(meow_u64 Seed, meow_u64 TotalLengthInBytes, void *SourceIni
     meow_aes_128 S2 = Meow128_GetAESConstant(MeowS2Init);
     meow_aes_128 S3 = Meow128_GetAESConstant(MeowS3Init);
     
-    meow_u128 Mixer = Meow128_Set64x2(Seed - TotalLengthInBytes,
-                                      Seed + TotalLengthInBytes + 1);
+    meow_u128 Mixer = Meow128_Set64x2(Seed1 - TotalLengthInBytes,
+                                      Seed2 + TotalLengthInBytes + 1);
     
     //
     // NOTE(casey): Handle as many full 256-byte blocks as possible

@@ -416,7 +416,7 @@ main(int ArgCount, char **Args)
                             int unsigned Ignored2;
                             __cpuid(Ignored, 0);
                             meow_u64 StartClock = __rdtsc();
-                            Test->FakeSlot = Type.Imp(0, Size, Buffer);
+                            Test->FakeSlot = Type.Imp(0, 0, Size, Buffer);
                             meow_u64 EndClock = __rdtscp(&Ignored2);
                             __cpuid(Ignored, 0);
                             
