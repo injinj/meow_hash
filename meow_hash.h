@@ -177,7 +177,11 @@ MeowHash_Accelerated(meow_u64 Seed1, meow_u64 Seed2, meow_u64 TotalLengthInBytes
     
     meow_u128 Mixer = Meow128_Set64x2(Seed1 - TotalLengthInBytes,
                                       Seed2 + TotalLengthInBytes + 1);
-    
+    S0 ^= Mixer;
+    S1 ^= Mixer;
+    S2 ^= Mixer;
+    S3 ^= Mixer;
+
     //
     // NOTE(casey): Handle as many full 256-byte blocks as possible
     //

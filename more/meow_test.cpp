@@ -114,7 +114,7 @@ main(int ArgCount, char **Args)
                                 SplitTest < 10;
                                 ++SplitTest)
                             {
-                                MeowHashBegin(&State);
+                                MeowHashBegin(&State, Seed, Seed, BufferSize);
                                 
                                 meow_u8 *At = Buffer;
                                 int unsigned Count = BufferSize;

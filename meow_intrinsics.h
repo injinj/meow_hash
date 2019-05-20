@@ -224,7 +224,7 @@ Meow128_Set64x2_State(meow_u64 Low64, meow_u64 High64)
 #endif
 
 #define MEOW_HASH_VERSION 4
-#define MEOW_HASH_VERSION_NAME "0.4/himalayan"
+#define MEOW_HASH_VERSION_NAME "0.4/aesdecx2"
 
 #if MEOW_INCLUDE_C
 

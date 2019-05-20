@@ -25,13 +25,18 @@ typedef struct meow_hash_state
 } meow_hash_state;
 
 static void
-MeowHashBegin(meow_hash_state *State)
+MeowHashBegin(meow_hash_state *State, meow_u64 Seed1, meow_u64 Seed2,
+              meow_u64 length)
 {
     State->S0 = Meow128_GetAESConstant(MeowS0Init);
     State->S1 = Meow128_GetAESConstant(MeowS1Init);
     State->S2 = Meow128_GetAESConstant(MeowS2Init);
     State->S3 = Meow128_GetAESConstant(MeowS3Init);
-    
+    meow_u128 Mixer = Meow128_Set64x2(Seed1 - length, Seed2 + length + 1);
+    State->S0 ^= Mixer;
+    State->S1 ^= Mixer;
+    State->S2 ^= Mixer;
+    State->S3 ^= Mixer;
     State->TotalLengthInBytes = 0;
     State->BufferLen = 0;
 }
@@ -370,6 +375,14 @@ Meow128_AESDEC_Cx2(meow_u32 *State, const void *KeyInit)
   Meow128_AESDEC_C(State, KeyInit);
 }
 
+static void
+Meow128_Cxor(void *S, void *M)
+{
+  int i;
+  for ( i = 0; i < 16; i++ )
+    ((meow_u8 *) S)[ i ] ^= ((meow_u8 *) M)[ i ];
+}
+
 static meow_hash
 MeowHash_C(meow_u64 Seed1, meow_u64 Seed2, meow_u64 TotalLengthInBytes, void *SourceInit)
 {
@@ -383,6 +396,12 @@ MeowHash_C(meow_u64 Seed1, meow_u64 Seed2, meow_u64 TotalLengthInBytes, void *So
     meow_u32 *S2 = (meow_u32 *)D2;
     meow_u32 *S3 = (meow_u32 *)D3;
     
+    meow_u64 Mixer[2] = {Seed1 - TotalLengthInBytes, Seed2 + TotalLengthInBytes + 1};
+    Meow128_Cxor( (void *) S0, (void *) Mixer );
+    Meow128_Cxor( (void *) S1, (void *) Mixer );
+    Meow128_Cxor( (void *) S2, (void *) Mixer );
+    Meow128_Cxor( (void *) S3, (void *) Mixer );
+
     meow_u8 *Source = (meow_u8 *)SourceInit;
     meow_u64 Len = TotalLengthInBytes;
     meow_u64 BlockCount = (Len >> 6);
@@ -417,8 +436,6 @@ MeowHash_C(meow_u64 Seed1, meow_u64 Seed2, meow_u64 TotalLengthInBytes, void *So
         
         Meow128_AESDEC_Cx2(S3, Buffer);
     }
-    
-    meow_u64 Mixer[2] = {Seed1 - TotalLengthInBytes, Seed2 + TotalLengthInBytes + 1};
     
     Meow128_AESDEC_C(S3, Mixer);
     Meow128_AESDEC_C(S2, Mixer);
